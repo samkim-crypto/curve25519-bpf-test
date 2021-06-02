@@ -1,0 +1,9 @@
+[package]
+name = "curve25519-bpf-test"
+version = "0.1.0"
+authors = ["samkim-crypto <skim13@cs.stanford.edu>"]
+edition = "2018"
+
+[dependencies]
+
+
