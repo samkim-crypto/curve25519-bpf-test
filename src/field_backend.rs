@@ -1,20 +1,13 @@
 //! Field arithmetic modulo \\(p = 2\^{255} - 19\\), using \\(64\\)-bit
 //! limbs with \\(128\\)-bit products.
 
+use crate::field::FieldElement;
+
 use core::fmt::Debug;
 use core::ops::Neg;
 use core::ops::{Add, AddAssign};
 use core::ops::{Mul, MulAssign};
 use core::ops::{Sub, SubAssign};
-
-/// A `FieldElement` represents an element of the field
-/// \\( \mathbb Z / (2\^{255} - 19)\\).
-///
-/// In the 64-bit implementation, a `FieldElement` is represented in
-/// radix \\(2\^{51}\\) as five `u64`s; the coefficients are allowed to
-/// grow up to \\(2\^{54}\\) between reductions modulo \\(p\\).
-#[derive(Copy, Clone)]
-pub struct FieldElement(pub (crate) [u64; 5]);
 
 impl Debug for FieldElement {
     fn fmt(&self, f: &mut ::core::fmt::Formatter) -> ::core::fmt::Result {
