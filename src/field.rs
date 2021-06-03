@@ -1,15 +1,8 @@
 
-use crate::constants;
+use crate::backend::constants;
 
-/// A `FieldElement` represents an element of the field
-/// \\( \mathbb Z / (2\^{255} - 19)\\).
-///
-/// In the 64-bit implementation, a `FieldElement` is represented in
-/// radix \\(2\^{51}\\) as five `u64`s; the coefficients are allowed to
-/// grow up to \\(2\^{54}\\) between reductions modulo \\(p\\).
-#[derive(Copy, Clone, Eq, PartialEq)]
-pub struct FieldElement(pub [u64; 5]);
 
+pub type FieldElement = crate::backend::field::FieldElement51;
 
 impl FieldElement {
     /// Determine if this `FieldElement` is negative, in the sense
@@ -25,10 +18,6 @@ impl FieldElement {
     }
 
     /// Determine if this `FieldElement` is zero.
-    ///
-    /// # Return
-    ///
-    /// If zero, return `Choice(1)`.  Otherwise, return `Choice(0)`.
     pub fn is_zero(&self) -> bool {
         self.to_bytes() == [0u8; 32]
     }
@@ -93,7 +82,7 @@ impl FieldElement {
             acc = &acc * input;
         }
 
-	// acc is nonzero iff all inputs are nonzero
+        // acc is nonzero iff all inputs are nonzero
         assert_eq!(acc.is_zero().unwrap_u8(), 0);
 
         // Compute the inverse of all products
@@ -137,80 +126,83 @@ impl FieldElement {
         t21
     }
 
-//     /// Given `FieldElements` `u` and `v`, compute either `sqrt(u/v)`
-//     /// or `sqrt(i*u/v)` in constant time.
-//     ///
-//     /// This function always returns the nonnegative square root.
-//     ///
-//     /// # Return
-//     ///
-//     /// - `(Choice(1), +sqrt(u/v))  ` if `v` is nonzero and `u/v` is square;
-//     /// - `(Choice(1), zero)        ` if `u` is zero;
-//     /// - `(Choice(0), zero)        ` if `v` is zero and `u` is nonzero;
-//     /// - `(Choice(0), +sqrt(i*u/v))` if `u/v` is nonsquare (so `i*u/v` is square).
-//     ///
-//     pub fn sqrt_ratio_i(u: &FieldElement, v: &FieldElement) -> (bool, FieldElement) {
-//         // Using the same trick as in ed25519 decoding, we merge the
-//         // inversion, the square root, and the square test as follows.
-//         //
-//         // To compute sqrt(α), we can compute β = α^((p+3)/8).
-//         // Then β^2 = ±α, so multiplying β by sqrt(-1) if necessary
-//         // gives sqrt(α).
-//         //
-//         // To compute 1/sqrt(α), we observe that
-//         //    1/β = α^(p-1 - (p+3)/8) = α^((7p-11)/8)
-//         //                            = α^3 * (α^7)^((p-5)/8).
-//         //
-//         // We can therefore compute sqrt(u/v) = sqrt(u)/sqrt(v)
-//         // by first computing
-//         //    r = u^((p+3)/8) v^(p-1-(p+3)/8)
-//         //      = u u^((p-5)/8) v^3 (v^7)^((p-5)/8)
-//         //      = (uv^3) (uv^7)^((p-5)/8).
-//         //
-//         // If v is nonzero and u/v is square, then r^2 = ±u/v,
-//         //                                     so vr^2 = ±u.
-//         // If vr^2 =  u, then sqrt(u/v) = r.
-//         // If vr^2 = -u, then sqrt(u/v) = r*sqrt(-1).
-//         //
-//         // If v is zero, r is also zero.
-// 
-//         let v3 = &v.square()  * v;
-//         let v7 = &v3.square() * v;
-//         let mut r = &(u * &v3) * &(u * &v7).pow_p58();
-//         let check = v * &r.square();
-// 
-//         let i = &constants::SQRT_M1;
-// 
-//         let correct_sign_sqrt = check == *u;
-//         let flipped_sign_sqrt = check == -u;
-//         let flipped_sign_sqrt_i = check == &(-u)*i;
-// 
-//         let r_prime = &constants::SQRT_M1 * &r;
-// 
-//         r.conditional_assign(&r_prime, flipped_sign_sqrt | flipped_sign_sqrt_i);
-// 
-//         // Choose the nonnegative square root.
-//         let r_is_negative = r.is_negative();
-//         r.conditional_negate(r_is_negative);
-// 
-//         let was_nonzero_square = correct_sign_sqrt | flipped_sign_sqrt;
-// 
-//         (was_nonzero_square, r)
-//     }
-// 
-//     /// Attempt to compute `sqrt(1/self)` in constant time.
-//     ///
-//     /// Convenience wrapper around `sqrt_ratio_i`.
-//     ///
-//     /// This function always returns the nonnegative square root.
-//     ///
-//     /// # Return
-//     ///
-//     /// - `(Choice(1), +sqrt(1/self))  ` if `self` is a nonzero square;
-//     /// - `(Choice(0), zero)           ` if `self` is zero;
-//     /// - `(Choice(0), +sqrt(i/self))  ` if `self` is a nonzero nonsquare;
-//     ///
-//     pub fn invsqrt(&self) -> (bool, FieldElement) {
-//         FieldElement::sqrt_ratio_i(&FieldElement::one(), self)
-//     }
+    /// Given `FieldElements` `u` and `v`, compute either `sqrt(u/v)`
+    /// or `sqrt(i*u/v)`.
+    ///
+    /// This function always returns the nonnegative square root.
+    ///
+    /// # Return
+    ///
+    /// - `(true, +sqrt(u/v))  ` if `v` is nonzero and `u/v` is square;
+    /// - `(true, zero)        ` if `u` is zero;
+    /// - `(false, zero)        ` if `v` is zero and `u` is nonzero;
+    /// - `(false, +sqrt(i*u/v))` if `u/v` is nonsquare (so `i*u/v` is square).
+    ///
+    pub fn sqrt_ratio_i(u: &FieldElement, v: &FieldElement) -> (bool, FieldElement) {
+        // Using the same trick as in ed25519 decoding, we merge the
+        // inversion, the square root, and the square test as follows.
+        //
+        // To compute sqrt(α), we can compute β = α^((p+3)/8).
+        // Then β^2 = ±α, so multiplying β by sqrt(-1) if necessary
+        // gives sqrt(α).
+        //
+        // To compute 1/sqrt(α), we observe that
+        //    1/β = α^(p-1 - (p+3)/8) = α^((7p-11)/8)
+        //                            = α^3 * (α^7)^((p-5)/8).
+        //
+        // We can therefore compute sqrt(u/v) = sqrt(u)/sqrt(v)
+        // by first computing
+        //    r = u^((p+3)/8) v^(p-1-(p+3)/8)
+        //      = u u^((p-5)/8) v^3 (v^7)^((p-5)/8)
+        //      = (uv^3) (uv^7)^((p-5)/8).
+        //
+        // If v is nonzero and u/v is square, then r^2 = ±u/v,
+        //                                     so vr^2 = ±u.
+        // If vr^2 =  u, then sqrt(u/v) = r.
+        // If vr^2 = -u, then sqrt(u/v) = r*sqrt(-1).
+        //
+        // If v is zero, r is also zero.
+
+        let v3 = &v.square()  * v;
+        let v7 = &v3.square() * v;
+        let mut r = &(u * &v3) * &(u * &v7).pow_p58();
+        let check = v * &r.square();
+
+        let i = &constants::SQRT_M1;
+
+        let correct_sign_sqrt = check == *u;
+        let flipped_sign_sqrt = check == -u;
+        let flipped_sign_sqrt_i = check == &(-u)*i;
+
+        let r_prime = &constants::SQRT_M1 * &r;
+
+        if flipped_sign_sqrt | flipped_sign_sqrt_i {
+            r = r_prime;
+        }
+
+        // Choose the nonnegative square root.
+        if r.is_negative() {
+            r.negate();
+        }
+
+        let was_nonzero_square = correct_sign_sqrt | flipped_sign_sqrt;
+
+        (was_nonzero_square, r)
+    }
+
+    /// Attempt to compute `sqrt(1/self)`.
+    ///
+    /// Convenience wrapper around `sqrt_ratio_i`.
+    ///
+    /// This function always returns the nonnegative square root.
+    ///
+    /// # Return
+    ///
+    /// - `(Choice(1), +sqrt(1/self))  ` if `self` is a nonzero square;
+    /// - `(Choice(0), zero)           ` if `self` is zero;
+    /// - `(Choice(0), +sqrt(i/self))  ` if `self` is a nonzero nonsquare;
+    ///
+    pub fn invsqrt(&self) -> (bool, FieldElement) {
+        FieldElement::sqrt_ratio_i(&FieldElement::one(), self)
+    }
 }
