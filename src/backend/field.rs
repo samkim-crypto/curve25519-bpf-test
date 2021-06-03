@@ -7,13 +7,15 @@ use core::ops::{Add, AddAssign};
 use core::ops::{Mul, MulAssign};
 use core::ops::{Sub, SubAssign};
 
+use borsh::{BorshDeserialize, BorshSerialize};
+
 /// A `FieldElement51` represents an element of the field
 /// \\( \mathbb Z / (2\^{255} - 19)\\).
 ///
 /// In the 64-bit implementation, a `FieldElement51` is represented in
 /// radix \\(2\^{51}\\) as five `u64`s; the coefficients are allowed to
 /// grow up to \\(2\^{54}\\) between reductions modulo \\(p\\).
-#[derive(Copy, Clone, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, BorshSerialize, BorshDeserialize)]
 pub struct FieldElement51(pub [u64; 5]);
 
 impl Debug for FieldElement51 {
@@ -499,3 +501,5 @@ impl FieldElement51 {
         square
     }
 }
+
+
