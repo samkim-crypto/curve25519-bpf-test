@@ -1,5 +1,5 @@
 use crate::backend::field::FieldElement51;
-use crate::backend::scalar::Scalar52;
+// use crate::backend::scalar::Scalar52;
 
 /// Edwards `d` value, equal to `-121665/121666 mod p`.
 pub(crate) const EDWARDS_D: FieldElement51 = FieldElement51([
@@ -28,11 +28,11 @@ pub const SQRT_M1: FieldElement51 = FieldElement51([
     765476049583133,
 ]);
 
-/// `R` = R % L where R = 2^260
-pub(crate) const R: Scalar52 = Scalar52([
-    0x000f48bd6721e6ed,
-    0x0003bab5ac67e45a,
-    0x000fffffeb35e51b,
-    0x000fffffffffffff,
-    0x00000fffffffffff,
-]);
+// /// `R` = R % L where R = 2^260
+// pub(crate) const R: Scalar52 = Scalar52([
+//     0x000f48bd6721e6ed,
+//     0x0003bab5ac67e45a,
+//     0x000fffffeb35e51b,
+//     0x000fffffffffffff,
+//     0x00000fffffffffff,
+// ]);

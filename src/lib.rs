@@ -4,6 +4,6 @@ pub(crate) mod macros;
 
 pub mod field;
 pub mod backend;
-pub mod edwards;
+// pub mod edwards;
 pub mod traits;
-pub mod scalar;
+// pub mod scalar;
